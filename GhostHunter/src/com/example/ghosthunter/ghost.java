@@ -13,7 +13,7 @@ public class ghost {
 	private int y;			// the Y coordinate
 	private boolean touched;	// if droid is touched/picked up
 	private Speed speed;	// the speed with its directions
-	private Rect space = new Rect();	//Rectangle to see what space it is occupying
+	//private Rect space = new Rect();	//Rectangle to see what space it is occupying
 
 	public ghost(Bitmap bitmap, int x, int y) {
 		this.bitmap = bitmap;
@@ -22,7 +22,7 @@ public class ghost {
 		this.speed = new Speed();
 		int xB = bitmap.getWidth();
 		int yB = bitmap.getHeight();
-		this.space.set(x-(xB/2), y+(yB/2), x+(xB/2), y-(yB/2));
+		//this.space.set(x-(xB/2), y+(yB/2), x+(xB/2), y-(yB/2));
 	}
 
 	public Bitmap getBitmap() {
@@ -44,16 +44,16 @@ public class ghost {
 		this.y = y;
 	}
 	
-	public Rect getSpace() {
-		return space;
-	}
-	
-	public void setSpace(int x, int y) {
-		this.space.top = y + (bitmap.getHeight() / 2);
-		this.space.bottom = y - (bitmap.getHeight() / 2);
-		this.space.left = x - (bitmap.getWidth() / 2);
-		this.space.right = x - (bitmap.getWidth() / 2);
-	}
+//	public Rect getSpace() {
+//		return space;
+//	}
+//	
+//	public void setSpace(int x, int y) {
+//		this.space.top = y + (bitmap.getHeight() / 2);
+//		this.space.bottom = y - (bitmap.getHeight() / 2);
+//		this.space.left = x - (bitmap.getWidth() / 2);
+//		this.space.right = x - (bitmap.getWidth() / 2);
+//	}
 
 	public boolean isTouched() {
 		return false;
@@ -79,10 +79,10 @@ public class ghost {
 		if (!touched) {
 			x += (speed.getXv() * speed.getxDirection()); 
 			y += (speed.getYv() * speed.getyDirection());
-			this.space.bottom += speed.getYv();
-			this.space.top += speed.getYv();
-			this.space.left += speed.getXv();
-			this.space.right += speed.getXv();
+//			this.space.bottom += speed.getYv();
+//			this.space.top += speed.getYv();
+//			this.space.left += speed.getXv();
+//			this.space.right += speed.getXv();
 		}
 	}
 

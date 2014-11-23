@@ -32,26 +32,28 @@ SurfaceHolder.Callback {
 	private ArrayList<bullet> bullets;
 	private long shootTime; //time between bullet fires
 	private long ghostTime;  //time between ghost regen
+	private int State; //0 paused, 1 running
 
 	public MainGamePanel(Context context) {
 		super(context);
+		State=1;
 		ghostTime=0;
 		// adding the callback (this) to the surface holder to intercept events
 		getHolder().addCallback(this);
 
 		// create droid and load bitmap
-		droid = new Droid(BitmapFactory.decodeResource(getResources(), R.drawable.hunter_right), 50, 50);
+		droid = new Droid(BitmapFactory.decodeResource(getResources(), R.drawable.hunter_right), 30, 50);
 		ghosts=new ArrayList<ghost>();
 		bullets=new ArrayList<bullet>();
 		b1=new button(BitmapFactory.decodeResource(getResources(), R.drawable.fire_button), 730, 1150); 
 
 
-		ghost a=new ghost(BitmapFactory.decodeResource(getResources(), R.drawable.ghost_1), 200,  300);
+		ghost a=new ghost(BitmapFactory.decodeResource(getResources(), R.drawable.ghost_1), 400,  300);
 		a.setSpeed(new Speed(3, 5));
 		a.getSpeed().flipXDirection();
-		ghost b=new ghost(BitmapFactory.decodeResource(getResources(), R.drawable.ghost_1), 50,  10);
+		ghost b=new ghost(BitmapFactory.decodeResource(getResources(), R.drawable.ghost_1), 400,  10);
 		b.setSpeed(new Speed(7,4));
-		ghost c=new ghost(BitmapFactory.decodeResource(getResources(), R.drawable.ghost_1), 100,  200);
+		ghost c=new ghost(BitmapFactory.decodeResource(getResources(), R.drawable.ghost_1), 400,  200);
 		ghosts.add(a);
 		ghosts.add(b);
 		ghosts.add(c);
@@ -95,6 +97,8 @@ SurfaceHolder.Callback {
 
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
+		if(State==1)
+		{
 		int pointerCount = event.getPointerCount();
 
 		for (int i = 0; i < pointerCount; i++)
@@ -132,7 +136,7 @@ SurfaceHolder.Callback {
 							}
 							
 							//updates rectangle for intersection, MUST be before update x and y
-							droid.setSpace((int)event.getX(i),(int)event.getY(i)-60);
+							//droid.setSpace((int)event.getX(i),(int)event.getY(i)-60);
 							
 							//update his coords
 							droid.setX((int)event.getX(i));
@@ -174,11 +178,19 @@ SurfaceHolder.Callback {
 
 			}
 		}
+		}
+		if(State==0)
+		{
+			
+			
+		}
 
 		return true;
 	}
 
 	public void render(Canvas canvas) {
+		if(State==1)
+		{
 		canvas.drawColor(Color.BLACK);
 		droid.draw(canvas);
 		for(ghost g : ghosts)
@@ -187,6 +199,11 @@ SurfaceHolder.Callback {
 
 		for(bullet b : bullets)
 			b.draw(canvas);
+		}
+		if(State==0)
+		{
+			canvas.drawColor(Color.BLACK);
+		}
 	}
 
 	/**
@@ -195,6 +212,8 @@ SurfaceHolder.Callback {
 	 * engine's update method.
 	 */
 	public void update() {
+		if(State==1)
+		{
 		long now=System.currentTimeMillis();
 
 		//add ghost every 3 sec
@@ -227,7 +246,20 @@ SurfaceHolder.Callback {
 
 			}
 		}
+		
+		//person collision with ghosts
+		for(ghost g : ghosts)
+		{
+			if ((g.getX() + g.getBitmap().getWidth() / 2)>(droid.getX()- droid.getBitmap().getWidth() / 2) &&
+					(g.getX() - g.getBitmap().getWidth() / 2)<(droid.getX()+ droid.getBitmap().getWidth() / 2)  &&
+					(g.getY() + g.getBitmap().getWidth() / 2)>(droid.getY()- droid.getBitmap().getHeight() / 2)  &&
+					(g.getY() - g.getBitmap().getWidth() / 2)<(droid.getY()+ droid.getBitmap().getHeight() / 2)) {
+					
+					State=0;
+			}
 
+		}
+		
 		// commands for each ghost
 		for(ghost g : ghosts)
 		{
@@ -321,12 +353,13 @@ SurfaceHolder.Callback {
 				c.setY(3000);
 		}
 
-		//check for collision of ghost and player
-		for (ghost g : ghosts) {
-			if (g.getSpace().intersect(droid.getSpace())) {
-				//insert pause or kill of update call, need some sort of functionality
-			}
-		}
+	}
+	
+	if(State==0)
+	{
+		
+		
+	}
 	}
 }
 
