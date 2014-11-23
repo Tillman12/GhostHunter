@@ -130,7 +130,10 @@ SurfaceHolder.Callback {
 								droid.setBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.hunter_left));
 								droid.getSpeed().setxDirection(-1);
 							}
-
+							
+							//updates rectangle for intersection, MUST be before update x and y
+							droid.setSpace((int)event.getX(i),(int)event.getY(i)-60);
+							
 							//update his coords
 							droid.setX((int)event.getX(i));
 							droid.setY((int)event.getY(i)-60);  //the Y is less so is is above your finger
@@ -228,7 +231,7 @@ SurfaceHolder.Callback {
 		// commands for each ghost
 		for(ghost g : ghosts)
 		{
-			//set of if statements to bounch ghosts off walls
+			//set of if statements to bounce ghosts off walls
 			//going right
 			if (g.getSpeed().getxDirection() == Speed.DIRECTION_RIGHT
 					&& g.getX() + g.getBitmap().getWidth() / 2 >= getWidth()) {
@@ -318,7 +321,12 @@ SurfaceHolder.Callback {
 				c.setY(3000);
 		}
 
-
+		//check for collision of ghost and player
+		for (ghost g : ghosts) {
+			if (g.getSpace().intersect(droid.getSpace())) {
+				//insert pause or kill of update call, need some sort of functionality
+			}
+		}
 	}
 }
 
