@@ -14,7 +14,12 @@ import android.content.Context;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Paint.Style;
+import android.graphics.Point;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.Display;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -28,16 +33,29 @@ SurfaceHolder.Callback {
 	private MainThread thread;
 	private Droid droid;
 	private button b1;
+	private button b2;
+	private button startB;
 	private ArrayList<ghost> ghosts;
 	private ArrayList<bullet> bullets;
+	private ArrayList<money> moneys;
 	private ArrayList<barrier> barriers;
 	private long shootTime; //time between bullet fires
 	private long ghostTime;  //time between ghost regen
+	private long barrierTime;
+	private long barrierHit;  //time between barrier hit
 	private int State; //0 paused, 1 running
+	private int kills; //ghost kills
+	private int moneyCount; //money collected
+	private int score; //money collected
+	
+	private boolean start;
 
 	public MainGamePanel(Context context) {
 		super(context);
-		State=1; //running
+		State=0; //start @ paused state
+	//	kills=0; 
+	//	score=0;
+	//	moneyCount = 0; 
 		ghostTime=0;
 
 		barriers=new ArrayList<barrier>();
@@ -48,24 +66,21 @@ SurfaceHolder.Callback {
 		barriers.add(d);
 
 		// create droid and load bitmap
-		droid = new Droid(BitmapFactory.decodeResource(getResources(), R.drawable.hunter_right), 30, 50);
+		droid = new Droid(BitmapFactory.decodeResource(getResources(), R.drawable.hunter_right), 400, 200);
 		ghosts=new ArrayList<ghost>();
 		bullets=new ArrayList<bullet>();
+		moneys=new ArrayList<money>();
+ 
+		//to be implemented?
+		int width=getWidth();
+		int height= getHeight();
+		
+		Log.d("ADebugTag", "Value: " + Integer.toString(width));
+		b1=new button(BitmapFactory.decodeResource(getResources(), R.drawable.fire_button), 700, 1120); 
+		b2=new button(BitmapFactory.decodeResource(getResources(), R.drawable.barrier_button), 560, 1120);
+		startB=new button(BitmapFactory.decodeResource(getResources(), R.drawable.newbutton), 400, 200); 
 
 
-		b1=new button(BitmapFactory.decodeResource(getResources(), R.drawable.fire_button), 730, 1150); 
-
-
-
-		ghost a=new ghost(BitmapFactory.decodeResource(getResources(), R.drawable.ghost_1), 400,  300);
-		a.setSpeed(new Speed(3, 5));
-		a.getSpeed().flipXDirection();
-		ghost b=new ghost(BitmapFactory.decodeResource(getResources(), R.drawable.ghost_1), 400,  10);
-		b.setSpeed(new Speed(7,4));
-		ghost c=new ghost(BitmapFactory.decodeResource(getResources(), R.drawable.ghost_1), 400,  200);
-		ghosts.add(a);
-		ghosts.add(b);
-		ghosts.add(c);
 
 		// create the game loop thread
 		thread = new MainThread(getHolder(), this);
@@ -160,6 +175,7 @@ SurfaceHolder.Callback {
 				if((int)event.getY(i)>getHeight()-120)
 				{
 					b1.handleActionDown((int)event.getX(i), (int)event.getY(i));
+					b2.handleActionDown((int)event.getX(i), (int)event.getY(i));
 
 				}
 
@@ -167,6 +183,7 @@ SurfaceHolder.Callback {
 				if(event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN)
 				{
 					b1.handleActionDown((int)event.getX(i), (int)event.getY(i));
+					b2.handleActionDown((int)event.getX(i), (int)event.getY(i));
 
 				}
 
@@ -178,13 +195,16 @@ SurfaceHolder.Callback {
 
 					if(b1.isTouched())
 						b1.setTouched(false);
+					if(b2.isTouched())
+						b2.setTouched(false);
 				}
 				//SECOND TOUCH OFF
 				if(event.getActionMasked() == MotionEvent.ACTION_POINTER_UP)
 				{
 					if(b1.isTouched())
 						b1.setTouched(false);
-
+					if(b2.isTouched())
+						b2.setTouched(false);
 				}
 			}
 		}
@@ -192,6 +212,19 @@ SurfaceHolder.Callback {
 		{
 			//set difficulty
 			//start game
+			int pointerCount = event.getPointerCount();
+
+			for (int i = 0; i < pointerCount; i++)
+			{	
+				if (event.getAction() == MotionEvent.ACTION_DOWN) 
+					startB.setBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.newbutton_tchd));
+
+				if (event.getAction() == MotionEvent.ACTION_UP) 
+				{
+					startB.handleActionDown((int)event.getX(i), (int)event.getY(i));
+					startB.setBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.newbutton));
+				}
+			}
 
 		}
 
@@ -206,16 +239,41 @@ SurfaceHolder.Callback {
 			for(ghost g : ghosts)
 				g.draw(canvas);
 			b1.draw(canvas);
+			b2.draw(canvas);
 
 			for(bullet b : bullets)
 				b.draw(canvas);
 
 			for(barrier c : barriers)
 				c.draw(canvas);
+
+			for(money p : moneys)
+				p.draw(canvas);
+
+			//text!
+			Paint paint = new Paint(); 
+
+			paint.setColor(Color.WHITE); 
+			paint.setTextSize(30); 
+			canvas.drawText("Kills: " + Integer.toString(kills), 10, 25, paint); 
+			canvas.drawText("Money: $" + Integer.toString(moneyCount), 600, 25, paint); 
+			paint.setTextSize(40);
+			canvas.drawText("Score: " + Integer.toString(score), 250, 40, paint); 
 		}
 		if(State==0)
 		{
 			canvas.drawColor(Color.BLACK);
+			startB.draw(canvas);
+			Paint paint = new Paint(); 
+
+			paint.setColor(Color.WHITE); 
+			paint.setTextSize(40); 
+			canvas.drawText("Ghosts killed: " + Integer.toString(kills), 250, 350, paint); 
+			canvas.drawText("Total Score: " + Integer.toString(score), 250, 450, paint); 
+			paint.setTextSize(25); 
+			canvas.drawText("Instructions: Kill ghosts, grab some $, and stay alive to score big.", 40, 550, paint);
+			canvas.drawText("You begin with $50, and can collect coins worth $5 to $15. ", 40, 580, paint);
+			canvas.drawText("Bullets cost $1, barriers cost $20.  Ghost kills are worth 300 points.", 40, 610, paint);
 		}
 	}
 
@@ -227,17 +285,29 @@ SurfaceHolder.Callback {
 	public void update() {
 		if(State==1)
 		{
+			startB.setTouched(false);
+			score++;
+			
+			if(start) //setting the initial money
+			{
+				moneyCount=50;
+				start=false;
+			}
+
 			long now=System.currentTimeMillis();
 
 			//add ghost every 3 sec
-			if(ghostTime < now-3000)
+			if(ghostTime < now-2000 || now < 300)
 			{
 
 				double r1= Math.random();
 				double r2= Math.random();
 				int randY= (int)r2*1000;
-				ghost a=new ghost(BitmapFactory.decodeResource(getResources(), R.drawable.ghost_1), 2000 ,randY); //offscreen
-				a.setSpeed(new Speed((float) r1*6 + 2,(float) r1*4 + 2));
+				ghost a=new ghost(BitmapFactory.decodeResource(getResources(), R.drawable.ghost_1), 2000 ,randY);
+				if(r1>.5)
+					a.setX(-1000); //left
+
+				a.setSpeed(new Speed((float) r1*3 + 1,(float) r1*3 + 1));
 				ghosts.add(a);
 				ghostTime=System.currentTimeMillis();
 			}
@@ -251,60 +321,78 @@ SurfaceHolder.Callback {
 							(g.getX() - g.getBitmap().getWidth() / 2)<b.getX() &&
 							(g.getY() + g.getBitmap().getWidth() / 2)>b.getY() &&
 							(g.getY() - g.getBitmap().getWidth() / 2)<b.getY()) {
+						double r1= Math.random();
+						double rand=  r1*10;
 						g.setSpeed(new Speed(0,0));
+						money m=new money(BitmapFactory.decodeResource(getResources(), R.drawable.money), g.getX(), g.getY(), 
+								(int) rand + 5);
+						moneys.add(m);
 						g.setX(2000); //ghost killed
 
 						b.setY(3000); //bullet killed
+						kills++; //add to kills
+						score+=300;  //add to score
 					}
 
 				}
 			}
 
+
 			//barrier collision with ghosts  **UNDER CONSTRUCTION**
+
 			for(barrier c: barriers)
 			{
 				for(ghost g: ghosts)
 				{
 					if ((c.getX() + c.getBitmap().getWidth() / 2)>(g.getX()- g.getBitmap().getWidth() / 2 ) &&
-							(c.getX() - c.getBitmap().getWidth() / 2)<(g.getX()+ g.getBitmap().getWidth() / 2 )&&
-							(c.getY() + c.getBitmap().getWidth() / 2)>(g.getY()- g.getBitmap().getHeight() / 2 )  &&
-							(c.getY() - c.getBitmap().getWidth() / 2)<(g.getY()+ g.getBitmap().getHeight() / 2 ))
+							( c.getX() - c.getBitmap().getWidth() / 2)<(g.getX()+ g.getBitmap().getWidth() / 2 )&&
+							(10+c.getY() + c.getBitmap().getHeight() / 2)>(g.getY()- g.getBitmap().getHeight() / 2 )  &&
+							(-10+c.getY() - c.getBitmap().getHeight() / 2)<(g.getY()+ g.getBitmap().getHeight() / 2 ) &&
+							now-150 > barrierHit)
 					{
-						if((g.getY() + g.getBitmap().getHeight() / 2)>(c.getY() - c.getBitmap().getHeight() / 2) ||
-								(g.getY() - g.getBitmap().getHeight() / 2)<(c.getY() + c.getBitmap().getHeight() / 2))
+						if((c.getY() + c.getBitmap().getHeight() / 2)<(-3+g.getY()- g.getBitmap().getHeight() / 2 )  ||
+								(c.getY() - c.getBitmap().getHeight() / 2)>(3+g.getY()+ g.getBitmap().getHeight() / 2 ))
 						{
-							if(g.getSpeed().getYv()>0)
-								g.setY(c.getY() - c.getBitmap().getWidth() / 2 - g.getBitmap().getWidth());
-
-							else
-								g.setY(c.getY() + c.getBitmap().getWidth() / 2 + g.getBitmap().getWidth());
-
 							g.getSpeed().flipYDirection();
+							barrierHit=now;
 						}
-						if((g.getX() + g.getBitmap().getWidth() / 2)<(c.getX() - c.getBitmap().getWidth() / 2 ) ||
-								(g.getX() - g.getBitmap().getWidth() / 2)>(c.getX() + c.getBitmap().getWidth() / 2 ))
+						else
 						{
-
 							g.getSpeed().flipXDirection();
+							barrierHit=now;
 						}
+
 					}
 
 				}
 			}
 
 			//person collision with ghosts
-			/*for(ghost g : ghosts)
+			for(ghost g : ghosts)
 			{
 				if ((g.getX() + g.getBitmap().getWidth() / 2)>(droid.getX()- droid.getBitmap().getWidth() / 2) &&
 						(g.getX() - g.getBitmap().getWidth() / 2)<(droid.getX()+ droid.getBitmap().getWidth() / 2)  &&
 						(g.getY() + g.getBitmap().getWidth() / 2)>(droid.getY()- droid.getBitmap().getHeight() / 2)  &&
 						(g.getY() - g.getBitmap().getWidth() / 2)<(droid.getY()+ droid.getBitmap().getHeight() / 2)) {
-
 					State=0;
+					droid.setX(400);
+					droid.setY(200);
 				}
-
 			}
-			 */
+
+
+			//person collision with money
+			for(money g : moneys)
+			{
+				if ((g.getX() + g.getBitmap().getWidth() / 2)>(droid.getX()- droid.getBitmap().getWidth() / 2) &&
+						(g.getX() - g.getBitmap().getWidth() / 2)<(droid.getX()+ droid.getBitmap().getWidth() / 2)  &&
+						(g.getY() + g.getBitmap().getWidth() / 2)>(droid.getY()- droid.getBitmap().getHeight() / 2)  &&
+						(g.getY() - g.getBitmap().getWidth() / 2)<(droid.getY()+ droid.getBitmap().getHeight() / 2)) {
+					g.setX(2000);
+					moneyCount+=g.getValue();
+				}
+			}
+
 
 			// commands for each ghost
 			for(ghost g : ghosts)
@@ -362,35 +450,41 @@ SurfaceHolder.Callback {
 				g.update();
 			}
 
-
-			if(b1.isTouched()) //FIRE button press
+			//shooting bullets
+			if(b1.isTouched()  && shootTime<now-250 &&  moneyCount>0) 
 			{
 				b1.setBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.fire_button_tchd));
-				if(droid.getSpeed().getxDirection()==1 && shootTime<now-250)
-				{
-					bullet a=new bullet(BitmapFactory.decodeResource(getResources(), R.drawable.bullet));
-					a.setX(droid.getX()+30);
-					a.setY(droid.getY()-15);
-					a.setSpeed(new Speed(15, 0));
-					a.setFired(true);
-					bullets.add(a);
-					shootTime=System.currentTimeMillis();
+				bullet a=new bullet(BitmapFactory.decodeResource(getResources(), R.drawable.bullet));
+				a.setY(droid.getY()-15);
+				a.setSpeed(new Speed(15, 0));
+				a.setFired(true);
+				shootTime=System.currentTimeMillis();
+				moneyCount-=1;
 
-				}
-				if(droid.getSpeed().getxDirection()==-1 && shootTime<now-250)
+				if(droid.getSpeed().getxDirection()==1)
+					a.setX(droid.getX()+30);
+				if(droid.getSpeed().getxDirection()==-1)
 				{
-					bullet a=new bullet(BitmapFactory.decodeResource(getResources(), R.drawable.bullet));
 					a.setX(droid.getX()-30);
-					a.setY(droid.getY()-15);
-					a.setSpeed(new Speed(15, 0));
 					a.getSpeed().flipXDirection();
-					a.setFired(true);
-					bullets.add(a);
-					shootTime=System.currentTimeMillis();
 				}
+				bullets.add(a);
 			}
-			else
+			else if(shootTime< now-300)
 				b1.setBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.fire_button));
+
+			//dropping barriers
+			if(b2.isTouched() && barrierTime < now-1000 && moneyCount>19)
+			{
+				b2.setBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.barrier_button_tchd));
+				barrier d=new barrier(BitmapFactory.decodeResource(getResources(), R.drawable.barrier), droid.getX(), 
+						droid.getY());
+				barriers.add(d);
+				barrierTime=System.currentTimeMillis();
+				moneyCount-=20;
+			}
+			else if(barrierTime< now-300)
+				b2.setBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.barrier_button));
 
 			for(bullet e : bullets)
 			{
@@ -403,6 +497,21 @@ SurfaceHolder.Callback {
 
 		if(State==0)
 		{
+			if(startB.isTouched())
+			{
+				State=1;
+				moneyCount=0;
+				kills=0;
+				score=0;
+				b1.setTouched(false);
+			}
+			if(!startB.isTouched())
+				State=0;
+			ghosts.clear();
+			moneys.clear();
+			bullets.clear();
+			barriers.clear();
+			start=true;
 
 
 		}
